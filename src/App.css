@@ -794,10 +794,12 @@
   .gallery__wrapper {
     touch-action: pan-x;
     padding: 1.5rem 0;
+    overflow: visible;
   }
 
   .gallery__track {
-    padding: 0;
+    padding-left: calc(50vw - 55px);
+    /* Center first card: half screen - half card width */
   }
 
   .gallery__card {

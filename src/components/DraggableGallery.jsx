@@ -62,12 +62,18 @@ function DraggableGallery() {
     }, [getCardWidth]);
 
     // Center offset calculation
+    // On mobile, CSS padding centers the first card, so no JS offset needed
+    // On PC, we need to calculate the offset to center cards
     const getCenterOffset = useCallback(() => {
-        if (typeof window !== 'undefined') {
-            return window.innerWidth / 2 - cardWidth / 2;
+        if (typeof window === 'undefined') return 0;
+
+        if (isMobile) {
+            // CSS padding already centers - no additional offset
+            return 0;
         }
-        return 0;
-    }, [cardWidth]);
+        // PC: center the card in viewport
+        return window.innerWidth / 2 - cardWidth / 2;
+    }, [cardWidth, isMobile]);
 
     // Start position (middle set, first card centered)
     const getStartOffset = useCallback(() => {
