@@ -798,8 +798,7 @@
   }
 
   .gallery__track {
-    padding-left: calc(50vw - 55px);
-    /* Center first card: half screen - half card width */
+    padding: 0;
   }
 
   .gallery__card {
