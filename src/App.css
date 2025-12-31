@@ -801,7 +801,14 @@
 
   .gallery__card {
     width: 220px;
-    height: 300px;
+    /* Kept existing width */
+    height: auto;
+    aspect-ratio: 3/5;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+  }
+
+  .gallery__card-title {
+    font-size: 1rem;
   }
 
   .about__image-img {
