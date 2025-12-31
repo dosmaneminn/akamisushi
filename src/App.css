@@ -354,8 +354,8 @@
 
 .gallery__track {
   display: flex;
-  gap: 2px;
   width: max-content;
+  padding: 0;
 }
 
 .gallery__card {

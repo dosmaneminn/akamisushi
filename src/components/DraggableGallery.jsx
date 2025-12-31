@@ -39,15 +39,16 @@ function DraggableGallery() {
         if (typeof window === 'undefined') return 360;
 
         if (window.innerWidth < 768) {
-            // Mobile: 3 cards visible with center card prominently displayed
-            // Card width = screen width / 3.5 (leaves room for partial side cards)
-            return Math.floor(window.innerWidth / 3.5);
+            // Mobile: Exact 3 cards visible logic
+            // To ensure 4th card doesn't show, card width must be roughly viewport / 2.9
+            // viewport = 375 -> card = 129px. Center + 2 partial sides fully fill screen.
+            return Math.floor(window.innerWidth / 2.9);
         }
         return 360; // PC
     }, []);
 
     const [cardWidth, setCardWidth] = useState(getCardWidth());
-    const cardGap = isMobile ? 6 : 2; // Clean gap for mobile
+    const cardGap = isMobile ? 12 : 2; // Increased gap for better mobile separation
     const totalCardWidth = cardWidth + cardGap;
     const oneSetWidth = itemCount * totalCardWidth;
 
@@ -78,7 +79,7 @@ function DraggableGallery() {
         const startOffset = getStartOffset();
         x.set(startOffset);
         setCurrentX(startOffset);
-    }, [cardWidth, getStartOffset, x]);
+    }, [cardWidth, getStartOffset, x, cardGap]); // Added cardGap dependency
 
     // Infinite loop boundary check
     const checkBounds = useCallback(() => {
@@ -156,7 +157,7 @@ function DraggableGallery() {
             <div className="gallery__wrapper" ref={constraintsRef}>
                 <motion.div
                     className="gallery__track"
-                    style={{ x }}
+                    style={{ x, gap: `${cardGap}px` }} // Dynamic gap sync
                     drag="x"
                     dragConstraints={{ left: -Infinity, right: Infinity }}
                     dragElastic={0.1}
