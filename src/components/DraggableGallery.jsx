@@ -6,6 +6,7 @@ function DraggableGallery() {
     const x = useMotionValue(0);
     const [isDragging, setIsDragging] = useState(false);
     const [currentX, setCurrentX] = useState(0);
+    const [isMobile, setIsMobile] = useState(false);
 
     // Original items
     const originalItems = [
@@ -23,17 +24,31 @@ function DraggableGallery() {
     const galleryItems = [...originalItems, ...originalItems, ...originalItems];
     const itemCount = originalItems.length;
 
-    // Responsive card sizing for mobile - 3 cards visible on mobile
-    const getCardWidth = () => {
-        if (typeof window !== 'undefined') {
-            // Mobile: ~100px cards for 3 visible, Desktop: 360px
-            return window.innerWidth < 768 ? Math.floor(window.innerWidth / 3.2) : 360;
+    // Check if mobile
+    useEffect(() => {
+        const checkMobile = () => {
+            setIsMobile(window.innerWidth < 768);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
+    }, []);
+
+    // Card dimensions - PC: 360px for 5 cards, Mobile: calculated for 3 cards
+    const getCardWidth = useCallback(() => {
+        if (typeof window === 'undefined') return 360;
+
+        if (window.innerWidth < 768) {
+            // Mobile: 3 cards visible, center card bigger
+            // Total visible width = 3 cards + gaps
+            // Center card = 40% of screen, side cards = 30% each
+            return Math.floor(window.innerWidth * 0.32);
         }
-        return 360;
-    };
+        return 360; // PC
+    }, []);
 
     const [cardWidth, setCardWidth] = useState(getCardWidth());
-    const cardGap = 2;
+    const cardGap = isMobile ? 8 : 2; // Slightly more gap on mobile for clarity
     const totalCardWidth = cardWidth + cardGap;
     const oneSetWidth = itemCount * totalCardWidth;
 
@@ -43,10 +58,11 @@ function DraggableGallery() {
             setCardWidth(getCardWidth());
         };
         window.addEventListener('resize', handleResize);
+        handleResize();
         return () => window.removeEventListener('resize', handleResize);
-    }, []);
+    }, [getCardWidth]);
 
-    // Starting position (middle set, centered)
+    // Center offset calculation
     const getCenterOffset = useCallback(() => {
         if (typeof window !== 'undefined') {
             return window.innerWidth / 2 - cardWidth / 2;
@@ -54,6 +70,7 @@ function DraggableGallery() {
         return 0;
     }, [cardWidth]);
 
+    // Start position (middle set, first card centered)
     const getStartOffset = useCallback(() => {
         return -(itemCount * totalCardWidth) + getCenterOffset();
     }, [itemCount, totalCardWidth, getCenterOffset]);
@@ -63,76 +80,73 @@ function DraggableGallery() {
         const startOffset = getStartOffset();
         x.set(startOffset);
         setCurrentX(startOffset);
-    }, [cardWidth]);
+    }, [cardWidth, getStartOffset, x]);
 
-    // Check bounds and reset for infinite loop
+    // Infinite loop boundary check
     const checkBounds = useCallback(() => {
         const currentPos = x.get();
         const centerOffset = getCenterOffset();
-        const oneSetWidth = itemCount * totalCardWidth;
+        const setWidth = itemCount * totalCardWidth;
 
-        // Calculate current virtual index
-        const currentIndex = (centerOffset - currentPos) / totalCardWidth;
+        // Calculate current index
+        const currentIndex = Math.round((centerOffset - currentPos) / totalCardWidth);
 
-        // Thresholds to jump sets (keep roughly in the middle set: index 8 to 15)
-        // If we go below index 4 (too far into start), jump forward
+        // Keep in middle set (indices 8-15)
         if (currentIndex < 4) {
-            x.set(currentPos - oneSetWidth); // Move physically left (index increases)
-        }
-        // If we go above index 19 (too far into end), jump backward
-        else if (currentIndex > itemCount * 2 + 3) {
-            x.set(currentPos + oneSetWidth); // Move physically right (index decreases)
+            x.set(currentPos - setWidth);
+        } else if (currentIndex > itemCount * 2 + 3) {
+            x.set(currentPos + setWidth);
         }
     }, [x, getCenterOffset, itemCount, totalCardWidth]);
 
-    // Update position and handle boundary reset
+    // Track position changes
     useEffect(() => {
         const unsubscribe = x.on('change', (latest) => {
             setCurrentX(latest);
-            if (!isDragging) {
-                checkBounds();
-            }
         });
         return () => unsubscribe();
-    }, [x, isDragging, checkBounds]);
+    }, [x]);
 
-    // Snap to a specific index
+    // Snap to specific index with smooth animation
     const snapToIndex = useCallback((targetIndex) => {
         const centerOffset = getCenterOffset();
-
-        // Clamp target index to valid range
-        const validIndex = Math.max(0, Math.min(targetIndex, itemCount * 3 - 1));
-        const snapX = centerOffset - validIndex * totalCardWidth;
+        const clampedIndex = Math.max(0, Math.min(targetIndex, itemCount * 3 - 1));
+        const snapX = centerOffset - clampedIndex * totalCardWidth;
 
         animate(x, snapX, {
             type: 'spring',
-            stiffness: 300,
-            damping: 30,
+            stiffness: 400,
+            damping: 35,
             onComplete: checkBounds
         });
     }, [getCenterOffset, itemCount, totalCardWidth, x, checkBounds]);
 
-    // Handle drag end - snap to nearest card with velocity/swipe support
+    // Handle drag end - snap to nearest card
     const handleDragEnd = useCallback(() => {
         setIsDragging(false);
         const currentXValue = x.get();
         const velocity = x.getVelocity();
         const centerOffset = getCenterOffset();
 
+        // Find closest card index
         const closestIndex = Math.round((centerOffset - currentXValue) / totalCardWidth);
         let targetIndex = closestIndex;
 
-        const swipeThreshold = 500;
+        // Velocity-based swipe detection (easier on mobile)
+        const swipeThreshold = isMobile ? 300 : 500;
+
         if (velocity < -swipeThreshold) {
+            // Swipe left = next card
             targetIndex = closestIndex + 1;
         } else if (velocity > swipeThreshold) {
+            // Swipe right = previous card
             targetIndex = closestIndex - 1;
         }
 
         snapToIndex(targetIndex);
-    }, [x, getCenterOffset, totalCardWidth, snapToIndex]);
+    }, [x, getCenterOffset, totalCardWidth, isMobile, snapToIndex]);
 
-    // Handle tapping a card
+    // Handle card tap
     const handleCardClick = useCallback((index) => {
         if (!isDragging) {
             snapToIndex(index);
@@ -161,6 +175,7 @@ function DraggableGallery() {
                             totalCardWidth={totalCardWidth}
                             cardWidth={cardWidth}
                             isDragging={isDragging}
+                            isMobile={isMobile}
                             onCardClick={() => handleCardClick(index)}
                         />
                     ))}
@@ -170,28 +185,32 @@ function DraggableGallery() {
     );
 }
 
-function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragging, onCardClick }) {
-    // Calculate screen center
+function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragging, isMobile, onCardClick }) {
     const screenCenter = typeof window !== 'undefined' ? window.innerWidth / 2 : 500;
 
-    // Calculate card's current position on screen
-    const cardPositionOnScreen = currentX + (index * totalCardWidth) + (cardWidth / 2);
+    // Calculate card's current center position on screen
+    const cardCenterOnScreen = currentX + (index * totalCardWidth) + (cardWidth / 2);
 
-    // Distance from screen center
-    const distanceFromCenter = Math.abs(cardPositionOnScreen - screenCenter);
+    // Distance from screen center (normalized by card width)
+    const distanceFromCenter = Math.abs(cardCenterOnScreen - screenCenter);
     const normalizedDistance = distanceFromCenter / totalCardWidth;
 
-    // Scale based on distance from center - center card is always biggest
-    // Progressive scale reduction - matching PC logic
+    // === SCALE LOGIC (same as PC) ===
+    // PC: 0.1 multiplier, max 0.22 reduction
+    // Result: center=1.0, 1st neighbor=0.9, 2nd neighbor=0.8, etc.
     const scaleReduction = Math.min(normalizedDistance * 0.1, 0.22);
     const scale = 1 - scaleReduction;
 
-    // Opacity reduction for non-center cards
+    // === OPACITY LOGIC (same as PC) ===
+    // PC: 0.15 multiplier, max 0.4 reduction
     const opacityReduction = Math.min(normalizedDistance * 0.15, 0.4);
     const opacity = 1 - opacityReduction;
 
     // Z-index - center card on top
     const zIndex = Math.max(1, Math.round(10 - normalizedDistance));
+
+    // Card height - maintain aspect ratio
+    const cardHeight = isMobile ? cardWidth * 1.4 : 480;
 
     return (
         <motion.div
@@ -201,12 +220,16 @@ function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragg
                 opacity: opacity,
             }}
             transition={{
-                duration: isDragging ? 0.1 : 0.35,
+                duration: isDragging ? 0.05 : 0.3,
                 ease: 'easeOut',
             }}
-            style={{ zIndex }}
+            style={{
+                zIndex,
+                width: cardWidth,
+                height: cardHeight,
+            }}
             onTap={onCardClick}
-            whileTap={{ scale: 0.98 }}
+            whileTap={{ scale: scale * 0.98 }}
         >
             <div className="gallery__card-image">
                 <img
@@ -218,7 +241,6 @@ function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragg
                     decoding="async"
                 />
             </div>
-
         </motion.div>
     );
 }

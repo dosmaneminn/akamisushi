@@ -793,22 +793,17 @@
 
   .gallery__wrapper {
     touch-action: pan-x;
+    padding: 1.5rem 0;
   }
 
   .gallery__track {
-    padding: 0 calc(50vw - 110px);
+    padding: 0;
   }
 
   .gallery__card {
-    width: 220px;
-    /* Kept existing width */
-    height: auto;
-    aspect-ratio: 3/5;
-    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
-  }
-
-  .gallery__card-title {
-    font-size: 1rem;
+    /* Dimensions controlled by JS for responsive 3-card layout */
+    border-radius: 10px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
   }
 
   .about__image-img {
@@ -865,8 +860,7 @@
   }
 
   .gallery__card {
-    width: 180px;
-    height: 250px;
+    border-radius: 8px;
   }
 
   .about__title {
