@@ -39,16 +39,15 @@ function DraggableGallery() {
         if (typeof window === 'undefined') return 360;
 
         if (window.innerWidth < 768) {
-            // Mobile: 3 cards visible, center card bigger
-            // Total visible width = 3 cards + gaps
-            // Center card = 40% of screen, side cards = 30% each
-            return Math.floor(window.innerWidth * 0.32);
+            // Mobile: 3 cards visible with center card prominently displayed
+            // Card width = screen width / 3.5 (leaves room for partial side cards)
+            return Math.floor(window.innerWidth / 3.5);
         }
         return 360; // PC
     }, []);
 
     const [cardWidth, setCardWidth] = useState(getCardWidth());
-    const cardGap = isMobile ? 8 : 2; // Slightly more gap on mobile for clarity
+    const cardGap = isMobile ? 6 : 2; // Clean gap for mobile
     const totalCardWidth = cardWidth + cardGap;
     const oneSetWidth = itemCount * totalCardWidth;
 
