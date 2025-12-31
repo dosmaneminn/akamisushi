@@ -6,7 +6,7 @@ function About() {
                     {/* Image Side */}
                     <div className="about__image-wrapper">
                         <div className="about__image">
-                            <img src="/images/about-bg.jpg" alt="Akami Sushi Hakkımızda" className="about__image-img" />
+                            <img src="/images/about-bg.jpg" alt="Akami Sushi Hakkımızda" className="about__image-img" loading="lazy" decoding="async" />
                         </div>
                         <div className="about__image-accent"></div>
                     </div>

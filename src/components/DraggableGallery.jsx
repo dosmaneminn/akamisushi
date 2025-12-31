@@ -163,6 +163,8 @@ function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragg
                     alt={item.title}
                     className="gallery__image"
                     draggable={false}
+                    loading="lazy"
+                    decoding="async"
                 />
             </div>
 

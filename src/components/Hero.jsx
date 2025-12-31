@@ -3,13 +3,13 @@ function Hero() {
         <section id="hero" className="hero">
             {/* Background Image */}
             <div className="hero__background">
-                <img src="/images/hero-bg.png" alt="Akami Sushi" className="hero__bg-image" />
+                <img src="/images/hero-bg.png" alt="Akami Sushi" className="hero__bg-image" loading="eager" decoding="async" />
                 <div className="hero__overlay"></div>
             </div>
 
             {/* Content */}
             <div className="hero__content">
-                <img src="/images/logo-yazısız.png" alt="Akami Sushi Logo" className="hero__center-logo fade-in-up" />
+                <img src="/images/logo-yazısız.png" alt="Akami Sushi Logo" className="hero__center-logo fade-in-up" loading="eager" decoding="async" />
                 <p className="hero__slogan fade-in-up">
                     Uzak Doğu'nun sanatı, Muğla'nın kalbinde.
                 </p>

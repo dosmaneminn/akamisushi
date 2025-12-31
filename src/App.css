@@ -758,6 +758,8 @@
 
   .header__mobile-btn {
     display: flex;
+    min-width: 44px;
+    min-height: 44px;
   }
 
   .header__logo {
@@ -766,13 +768,31 @@
     transform: translateX(-50%);
   }
 
+  .header__logo-img {
+    height: 70px;
+  }
+
   .hero__title {
     font-size: 2.5rem;
+  }
+
+  .hero__center-logo {
+    max-width: 200px;
   }
 
   .hero__buttons {
     flex-direction: column;
     align-items: center;
+  }
+
+  .hero__buttons .btn {
+    min-width: 250px;
+    min-height: 48px;
+    padding: 1rem 2rem;
+  }
+
+  .gallery__wrapper {
+    touch-action: pan-x;
   }
 
   .gallery__track {
@@ -782,6 +802,11 @@
   .gallery__card {
     width: 220px;
     height: 300px;
+  }
+
+  .about__image-img {
+    aspect-ratio: 1/1;
+    max-height: 400px;
   }
 
   .footer__content {
@@ -796,6 +821,12 @@
     gap: 1rem 2rem;
   }
 
+  .footer__links a {
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+
   .footer__bottom {
     flex-direction: column;
     gap: 0.5rem;
@@ -804,12 +835,39 @@
 }
 
 @media (max-width: 480px) {
+  .header__logo-img {
+    height: 60px;
+  }
+
   .hero__title {
     font-size: 2rem;
+  }
+
+  .hero__center-logo {
+    max-width: 150px;
+  }
+
+  .hero__slogan {
+    font-size: 0.875rem;
+    padding: 0 1rem;
+  }
+
+  .hero__buttons .btn {
+    min-width: 200px;
+    font-size: 0.75rem;
   }
 
   .gallery__card {
     width: 180px;
     height: 250px;
+  }
+
+  .about__title {
+    font-size: 1.75rem;
+  }
+
+  .contact__info-item {
+    flex-direction: column;
+    text-align: center;
   }
 }

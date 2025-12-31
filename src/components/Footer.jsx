@@ -8,7 +8,7 @@ function Footer() {
                     {/* Logo */}
                     <div className="footer__brand">
                         <div className="footer__logo">
-                            <img src="/images/logo.png" alt="Akami Sushi" className="footer__logo-img" />
+                            <img src="/images/logo.png" alt="Akami Sushi" className="footer__logo-img" loading="lazy" decoding="async" />
                         </div>
                     </div>
 
