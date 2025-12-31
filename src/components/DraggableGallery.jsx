@@ -65,26 +65,52 @@ function DraggableGallery() {
         setCurrentX(startOffset);
     }, [cardWidth]);
 
-    // Update position and handle boundary reset during drag
+    // Check bounds and reset for infinite loop
+    const checkBounds = useCallback(() => {
+        const currentPos = x.get();
+        const centerOffset = getCenterOffset();
+        const oneSetWidth = itemCount * totalCardWidth;
+
+        // Calculate current virtual index
+        const currentIndex = (centerOffset - currentPos) / totalCardWidth;
+
+        // Thresholds to jump sets (keep roughly in the middle set: index 8 to 15)
+        // If we go below index 4 (too far into start), jump forward
+        if (currentIndex < 4) {
+            x.set(currentPos - oneSetWidth); // Move physically left (index increases)
+        }
+        // If we go above index 19 (too far into end), jump backward
+        else if (currentIndex > itemCount * 2 + 3) {
+            x.set(currentPos + oneSetWidth); // Move physically right (index decreases)
+        }
+    }, [x, getCenterOffset, itemCount, totalCardWidth]);
+
+    // Update position and handle boundary reset
     useEffect(() => {
         const unsubscribe = x.on('change', (latest) => {
             setCurrentX(latest);
-
-            // Real-time boundary checking during drag for seamless looping
-            if (isDragging) {
-                const centerOffset = getCenterOffset();
-                const leftBound = centerOffset - 2.5 * oneSetWidth;
-                const rightBound = centerOffset + 0.5 * oneSetWidth;
-
-                if (latest < leftBound) {
-                    x.set(latest + oneSetWidth);
-                } else if (latest > rightBound) {
-                    x.set(latest - oneSetWidth);
-                }
+            if (!isDragging) {
+                checkBounds();
             }
         });
         return () => unsubscribe();
-    }, [x, isDragging, getCenterOffset, oneSetWidth]);
+    }, [x, isDragging, checkBounds]);
+
+    // Snap to a specific index
+    const snapToIndex = useCallback((targetIndex) => {
+        const centerOffset = getCenterOffset();
+
+        // Clamp target index to valid range
+        const validIndex = Math.max(0, Math.min(targetIndex, itemCount * 3 - 1));
+        const snapX = centerOffset - validIndex * totalCardWidth;
+
+        animate(x, snapX, {
+            type: 'spring',
+            stiffness: 300,
+            damping: 30,
+            onComplete: checkBounds
+        });
+    }, [getCenterOffset, itemCount, totalCardWidth, x, checkBounds]);
 
     // Handle drag end - snap to nearest card with velocity/swipe support
     const handleDragEnd = useCallback(() => {
@@ -93,55 +119,25 @@ function DraggableGallery() {
         const velocity = x.getVelocity();
         const centerOffset = getCenterOffset();
 
-        // Calculate which card we're currently closest to
         const closestIndex = Math.round((centerOffset - currentXValue) / totalCardWidth);
-
-        // Determine target index based on swipe velocity
         let targetIndex = closestIndex;
 
-        // Swipe threshold (pixels per second)
         const swipeThreshold = 500;
-
         if (velocity < -swipeThreshold) {
-            // Strong swipe left -> go to next card
-            targetIndex = Math.ceil((centerOffset - currentXValue) / totalCardWidth);
+            targetIndex = closestIndex + 1;
         } else if (velocity > swipeThreshold) {
-            // Strong swipe right -> go to previous card
-            targetIndex = Math.floor((centerOffset - currentXValue) / totalCardWidth);
+            targetIndex = closestIndex - 1;
         }
 
-        // Clamp target index to valid range for infinite loop logic (middle set focus)
-        // We allow snapping slightly outside but reset immediately after
-        const validIndex = Math.max(0, Math.min(targetIndex, itemCount * 3 - 1));
-        let snapX = centerOffset - validIndex * totalCardWidth;
+        snapToIndex(targetIndex);
+    }, [x, getCenterOffset, totalCardWidth, snapToIndex]);
 
-        const transition = {
-            type: 'spring',
-            stiffness: 300,
-            damping: 30,
-            onComplete: () => {
-                // Seamless infinite loop reset
-                const currentPos = x.get();
-                // Boundaries for the middle set
-                const leftBoundary = centerOffset - (itemCount * 2 - 0.5) * totalCardWidth; // Roughly end of middle set
-                const rightBoundary = centerOffset - (itemCount * 1 - 0.5) * totalCardWidth; // Roughly start of middle set
-
-                // Check if we need to jump sets
-                if (currentPos > rightBoundary) {
-                    // We are in the left set (positions are more positive)
-                    // Jump to the equivalent position in the middle set
-                    x.set(currentPos - oneSetWidth);
-                } else if (currentPos < leftBoundary) {
-                    // We are in the right set (positions are more negative)
-                    // Jump to the equivalent position in the middle set
-                    x.set(currentPos + oneSetWidth);
-                }
-            }
-        };
-
-        // Animate to snap position
-        animate(x, snapX, transition);
-    }, [x, getCenterOffset, totalCardWidth, itemCount, oneSetWidth]);
+    // Handle tapping a card
+    const handleCardClick = useCallback((index) => {
+        if (!isDragging) {
+            snapToIndex(index);
+        }
+    }, [isDragging, snapToIndex]);
 
     return (
         <section id="gallery" className="gallery">
@@ -155,7 +151,6 @@ function DraggableGallery() {
                     dragTransition={{ bounceStiffness: 400, bounceDamping: 40 }}
                     onDragStart={() => setIsDragging(true)}
                     onDragEnd={handleDragEnd}
-                    whileTap={{ cursor: 'grabbing' }}
                 >
                     {galleryItems.map((item, index) => (
                         <GalleryCard
@@ -166,6 +161,7 @@ function DraggableGallery() {
                             totalCardWidth={totalCardWidth}
                             cardWidth={cardWidth}
                             isDragging={isDragging}
+                            onCardClick={() => handleCardClick(index)}
                         />
                     ))}
                 </motion.div>
@@ -174,7 +170,7 @@ function DraggableGallery() {
     );
 }
 
-function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragging }) {
+function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragging, onCardClick }) {
     // Calculate screen center
     const screenCenter = typeof window !== 'undefined' ? window.innerWidth / 2 : 500;
 
@@ -186,13 +182,12 @@ function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragg
     const normalizedDistance = distanceFromCenter / totalCardWidth;
 
     // Scale based on distance from center - center card is always biggest
-    // Progressive scale reduction - more aggressive on mobile for "pop" effect
-    // If distance is 0 (center), scale is 1. If distance is 1 width away, scale drops significantly.
-    const scaleReduction = Math.min(normalizedDistance * 0.2, 0.3);
+    // Progressive scale reduction - matching PC logic
+    const scaleReduction = Math.min(normalizedDistance * 0.1, 0.22);
     const scale = 1 - scaleReduction;
 
     // Opacity reduction for non-center cards
-    const opacityReduction = Math.min(normalizedDistance * 0.3, 0.5);
+    const opacityReduction = Math.min(normalizedDistance * 0.15, 0.4);
     const opacity = 1 - opacityReduction;
 
     // Z-index - center card on top
@@ -210,6 +205,8 @@ function GalleryCard({ item, index, currentX, totalCardWidth, cardWidth, isDragg
                 ease: 'easeOut',
             }}
             style={{ zIndex }}
+            onTap={onCardClick}
+            whileTap={{ scale: 0.98 }}
         >
             <div className="gallery__card-image">
                 <img
